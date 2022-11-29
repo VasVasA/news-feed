@@ -21,4 +21,7 @@
 
 ###> docker ###
 /docker/.env
+.bash_history
 ###< docker ###
+
+/.idea
