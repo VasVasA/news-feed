@@ -2,8 +2,6 @@ version: "3.9"
 
 services:
   mysql:
-    hostname: mysql
-    image: mysql
     container_name: mysql
     build:
       context: ./mysql
@@ -16,7 +14,6 @@ services:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
 
   php-fpm:
-    hostname: php-fpm
     container_name: php-fpm
     build:
       context: ./../
@@ -43,3 +40,6 @@ services:
       - ..:/var/www:rw
     depends_on:
       - php-fpm
+
+volumes:
+  db_data:
