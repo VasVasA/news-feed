@@ -13,7 +13,7 @@ RUN if [ ${INSTALL_XDEBUG} = true ]; \
 
 COPY ./docker/php-fpm/xdebug.ini /usr/local/etc/php/conf.d/xdebug.ini
 
-# Postgres
+# Mysql
 RUN docker-php-ext-install pdo_mysql mysqli
 
 # Configure non-root user.
