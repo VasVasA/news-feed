@@ -2,6 +2,7 @@
 
 namespace App\Service\Parser;
 
+use App\Service\WebApi\WebApiInterface;
 
 /**
  * Интерфейс парсера

@@ -27,21 +27,22 @@ class WebApi implements WebApiInterface
                 CURLOPT_POST => $isPost,
                 CURLOPT_POSTFIELDS => $postFields,
                 CURLOPT_RETURNTRANSFER => true,
-                CURLOPT_FAILONERROR => true
+                CURLOPT_FOLLOWLOCATION => true
             ]
         );
         $curlResponse = curl_exec($curlDescriptor);
         if (curl_errno($curlDescriptor)) {
             $errorMessage = curl_error($curlDescriptor);
         }
-        if ($curlResponse !== false) {
+        $curlResponseCode = curl_getinfo($curlDescriptor, CURLINFO_HTTP_CODE);
+        if ($curlResponse !== false && $curlResponseCode === 200) {
             if (!isset($errorMessage)) {
                 return $curlResponse;
             } else {
-                throw new Exception($errorMessage, curl_getinfo($curlDescriptor, CURLINFO_HTTP_CODE));
+                throw new Exception($errorMessage, $curlResponseCode);
             }
         } else {
-            throw new Exception('Unknown error', 503);
+            throw new Exception($curlResponse, $curlResponseCode);
         }
     }
 }

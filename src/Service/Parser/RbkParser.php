@@ -3,6 +3,7 @@
 namespace App\Service\Parser;
 
 use App\Service\WebApi\WebApiInterface;
+use DOMDocument;
 
 class RbkParser implements ParserInterface
 {
@@ -14,7 +15,9 @@ class RbkParser implements ParserInterface
     public function parse(): array
     {
         $page = $this->webApi->sendRequest($this->sourceUrl);
-        return [];
+        $dom = new DOMDocument();
+        $dom->loadHTML($page);
+        return json_encode($page);
     }
 
 }

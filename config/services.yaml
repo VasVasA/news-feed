@@ -23,11 +23,19 @@ services:
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones
 
-    app.service.parser: '@app.service.parser.rbk_parser'
-
-
+    App\Service\Parser\ParserInterface: '@app.service.parser.rbk_parser'
+    App\Service\WebApi\WebApiInterface: '@app.service.web_api.web_api'
 
     app.service.parser.rbk_parser:
         class: App\Service\Parser\RbkParser
         arguments:
             - '%env(RBK_URL)%'
+            - '@App\Service\WebApi\WebApiInterface'
+
+    app.controller.api.v1.parse_controller:
+        class: App\Controller\API\V1\ParseController
+        tags:
+            - { name: App\Service\Parser\ParserInterface }
+
+    app.service.web_api.web_api:
+        class: App\Service\WebApi\WebApi
