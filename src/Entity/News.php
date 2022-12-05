@@ -31,6 +31,9 @@ class News
     #[ORM\Column(length: 255)]
     private ?string $source = null;
 
+    #[ORM\Column(length: 1000)]
+    private ?string $url = null;
+
     public function getId(): ?int
     {
         return $this->id;
@@ -92,6 +95,18 @@ class News
     public function setSource(string $source): self
     {
         $this->source = $source;
+
+        return $this;
+    }
+
+    public function getUrl(): ?string
+    {
+        return $this->url;
+    }
+
+    public function setUrl(string $url): self
+    {
+        $this->url = $url;
 
         return $this;
     }
