@@ -3,8 +3,11 @@
 namespace App\Service\Parser;
 
 use App\Service\WebApi\WebApiInterface;
+use DateTime;
 use DOMDocument;
+use DOMElement;
 use DOMXPath;
+use Exception;
 
 class RbkParser implements ParserInterface
 {
@@ -16,37 +19,76 @@ class RbkParser implements ParserInterface
     ) {
     }
 
+    /**
+     * @return array
+     * @throws Exception
+     */
     public function parse(): array
     {
-        $resultNews = [];
-        $page = $this->webApi->sendRequest($this->sourceUrl);
+        $page = $this->makeRequestToSource($this->sourceUrl);
+        $dom = $this->createDomDocument($page);
+
+        return $this->parseNewsList($dom);
+    }
+
+    /**
+     * @param $sourceUrl
+     * @return string
+     */
+    private function makeRequestToSource($sourceUrl): string
+    {
+        return $this->webApi->sendRequest($sourceUrl);
+    }
+
+    /**
+     * @param string $page
+     * @return DOMDocument
+     */
+    private function createDomDocument(string $page): DOMDocument
+    {
         $dom = new DOMDocument();
         $internalErrors = libxml_use_internal_errors(true);
         $dom->loadHTML(html_entity_decode($page));
         libxml_use_internal_errors($internalErrors);
-        $finder = new DomXPath($dom);
-        $expression = './/a[contains(concat(" ", normalize-space(@class), " "), " '.$this->classname.' ")]';
-        $itemList = $finder->evaluate($expression);
+
+        return $dom;
+    }
+
+    /**
+     * @param DOMDocument $dom
+     * @return array
+     * @throws Exception
+     */
+    private function parseNewsList(DOMDocument $dom): array
+    {
+        $resultNews = [];
+        $itemList = $this->searchElementByClassName($dom, $this->classname);
         foreach ($itemList as $item) {
             $news['url'] = $item->getAttribute('href');
-            foreach ($item->childNodes as $child) {
-                if ($child instanceof \DOMElement) {
-                    $childClassName = $child->getAttribute('class');
-                    if (str_contains($childClassName, 'news-feed__item__grid')) {
-                        foreach ($child->childNodes as $newsContentBlock) {
-                            foreach ($newsContentBlock->childNodes as $childContentBlock) {
-                                if ($childContentBlock instanceof \DOMElement) {
-                                    if (str_contains(
-                                        $childContentBlock->getAttribute('class'),
-                                        'news-feed__item__title'
-                                    )) {
-                                        $news['title'] = $childContentBlock->textContent;
-                                    }
-                                    if (str_contains(
-                                        $childContentBlock->getAttribute('class'),
-                                        'news-feed__item__date'
-                                    )) {
-                                        $news['date'] = $childContentBlock->textContent;
+            if (str_contains($news['url'], $this->sourceUrl)) {
+                foreach ($item->childNodes as $child) {
+                    if ($child instanceof DOMElement) {
+                        $childClassName = $child->getAttribute('class');
+                        if (str_contains($childClassName, 'news-feed__item__grid')) {
+                            foreach ($child->childNodes as $newsContentBlock) {
+                                foreach ($newsContentBlock->childNodes as $childContentBlock) {
+                                    if ($childContentBlock instanceof DOMElement) {
+                                        if (str_contains(
+                                            $childContentBlock->getAttribute('class'),
+                                            'news-feed__item__title'
+                                        )) {
+                                            $news['title'] = trim($childContentBlock->textContent);
+                                        }
+                                        if (str_contains(
+                                            $childContentBlock->getAttribute('class'),
+                                            'news-feed__item__date'
+                                        )) {
+                                            $childContentBlockList = explode(',', $childContentBlock->textContent);
+                                            $news['category'] = trim($childContentBlockList[0]);
+                                            $news['date'] = $this->createDateTimeForNews(
+                                                substr(trim($childContentBlockList[1]), 2)
+                                            );
+                                        }
                                     }
                                 }
                             }
@@ -54,10 +96,51 @@ class RbkParser implements ParserInterface
                     }
                 }
             }
-            $resultNews[] = $news;
+            if (isset($news['title'])) {
+                $fullData = $this->parseSingleNews($news['url']);
+                $resultNews[] = $news;
+            }
         }
 
         return $resultNews;
+    }
+
+    /**
+     * @param DOMDocument $dom
+     * @param string $className
+     * @return mixed
+     */
+    private function searchElementByClassName(DOMDocument $dom, string $className): mixed
+    {
+        $finder = new DomXPath($dom);
+        $expression = './/a[contains(concat(" ", normalize-space(@class), " "), " '.$className.' ")]';
+
+        return $finder->evaluate($expression);
+    }
+
+    /**
+     * @throws Exception
+     */
+    private function createDateTimeForNews(string $time): DateTime
+    {
+        return new DateTime($time);
+    }
+
+    private function parseSingleNews(string $url)
+    {
+        $news = [];
+        $page = $this->makeRequestToSource($url);
+        $dom = $this->createDomDocument($page);
+        $itemList = $this->searchElementByClassName($dom, 'article__text');
+        foreach ($itemList->childNodes as $item) {
+            if ($item instanceof DOMElement) {
+                if (str_contains($item->getAttribute('class'), 'article__text__overview')) {
+                    $news = trim($item->textContent);
+                }
+            }
+        }
+
+        return $news;
     }
 
 }
