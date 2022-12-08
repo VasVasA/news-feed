@@ -17,8 +17,9 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 class ParseNewsCommand extends Command
 {
 
-    public function __construct(ParserInterface $parser)
+    public function __construct(private readonly ParserInterface $parser)
     {
+        parent::__construct();
     }
 
     protected function configure(): void
@@ -31,9 +32,8 @@ class ParseNewsCommand extends Command
         $io = new SymfonyStyle($input, $output);
         $io->info('Start parsing...');
         $count = $input->getArgument('count');
-
-
-        $io->success('You have a new command! Now make it your own! Pass --help to see your options.');
+        $newsList = $this->parser->parse($count);
+        $io->success('Success!');
 
         return Command::SUCCESS;
     }

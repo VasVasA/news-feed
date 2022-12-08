@@ -10,9 +10,10 @@ use App\Service\WebApi\WebApiInterface;
 interface ParserInterface
 {
     /**
-     * Парсить страницу по указанному URL
+     * Парсим страницу, получаем список новостей
      *
+     * @param int $count
      * @return array
      */
-    public function parse(): array;
+    public function parse(int $count): array;
 }

@@ -9,6 +9,9 @@ use DOMElement;
 use DOMXPath;
 use Exception;
 
+/**
+ * Класс для парсинга новостей с РБК
+ */
 class RbkParser implements ParserInterface
 {
 
@@ -20,15 +23,16 @@ class RbkParser implements ParserInterface
     }
 
     /**
+     * @param int $count
      * @return array
      * @throws Exception
      */
-    public function parse(): array
+    public function parse(int $count = 15): array
     {
         $page = $this->makeRequestToSource($this->sourceUrl);
         $dom = $this->createDomDocument($page);
 
-        return $this->parseNewsList($dom);
+        return $this->parseNewsList($dom, $count);
     }
 
     /**
@@ -56,17 +60,20 @@ class RbkParser implements ParserInterface
 
     /**
      * @param DOMDocument $dom
+     * @param int $count
      * @return array
      * @throws Exception
      */
-    private function parseNewsList(DOMDocument $dom): array
+    private function parseNewsList(DOMDocument $dom, int $count): array
     {
         $resultNews = [];
         $itemList = $this->searchElementByClassAndTagNames($dom, $this->classname, 'a');
         foreach ($itemList as $item) {
+            $news = ['source' => $this->sourceUrl];
             $news['url'] = $item->getAttribute('href');
             if (str_contains($news['url'], $this->sourceUrl)) {
-                foreach ($item->childNodes as $child) {
+                for ($i = 0; $i < $count; $i++) {
+                    $child = $item->childNodes[$i];
                     if ($child instanceof DOMElement) {
                         $childClassName = $child->getAttribute('class');
                         if (str_contains($childClassName, 'news-feed__item__grid')) {
@@ -85,7 +92,7 @@ class RbkParser implements ParserInterface
                                         )) {
                                             $childContentBlockList = explode(',', $childContentBlock->textContent);
                                             $news['category'] = trim($childContentBlockList[0]);
-                                            $news['date'] = $this->createDateTimeForNews(
+                                            $news['publicationDateTime'] = $this->createDateTimeForNews(
                                                 substr(trim($childContentBlockList[1]), 2)
                                             );
                                         }
@@ -134,18 +141,20 @@ class RbkParser implements ParserInterface
      */
     private function parseSingleNews(string $url): array
     {
-        $news = ['fullText' => ''];
+        $news = ['text' => ''];
         $page = $this->makeRequestToSource($url);
         $dom = $this->createDomDocument($page);
         $itemList = $this->searchElementByClassAndTagNames($dom, 'article__text', 'div');
-        foreach ($itemList[0]->childNodes as $item) {
-            if ($item instanceof DOMElement) {
-                if ($item->tagName === 'p') {
-                    $news['fullText'] .= trim($item->textContent).'<br>';
-                } elseif ($item->tagName === 'div' && $item->getAttribute('class') === 'article__main-image') {
-                    $imageUrl = $item->
-                    firstElementChild->firstElementChild->firstElementChild->getAttribute('srcset');
-                    $news['image'] = explode(' ',$imageUrl)[0];
+        if (!is_null($itemList)) {
+            foreach ($itemList[0]->childNodes as $item) {
+                if ($item instanceof DOMElement) {
+                    if ($item->tagName === 'p') {
+                        $news['text'] .= trim($item->textContent).'<br>';
+                    } elseif ($item->tagName === 'div' && $item->getAttribute('class') === 'article__main-image') {
+                        $imageUrl = $item->
+                        firstElementChild->firstElementChild->firstElementChild->getAttribute('srcset');
+                        $news['image'] = explode(' ', $imageUrl)[0];
+                    }
                 }
             }
         }
